@@ -1,12 +1,19 @@
-#include <stdio.h>  /* printf */
-#include <stddef.h> /* size_t */
+#include <stdio.h>  /* printf 		 */
+#include <stddef.h> /* size_t 		 */
 #include <stdlib.h> /* rand, alloc   */
-#include <time.h>	/* time	  */
+#include <time.h>	/* time	  		 */
+#include <assert.h> /* assert 		 */
+
+#include "utils.h"
 
 #define CARDS_PER_DECK (52)
-#define CARDS_PER_SUIT (13)
 #define NUM_OF_SUITS (4)
+#define CARDS_PER_SUIT ((CARDS_PER_DECK) / (NUM_OF_SUITS))
 #define CARD_MASK ((1 << 6) - 1)
+#define FACED_DOWN_DEFAULT (3)
+
+#define ADD (0)
+#define SUBTRACT (1)
 
 typedef unsigned char card_t;
 typedef struct player_s
@@ -24,7 +31,7 @@ typedef struct deck_s
 void CreateDeck(card_t deck[]);
 void ShuffleDeck(card_t deck[]);
 void DealOutCards(card_t deck[], player_t *player1, player_t *player2);
-void Battle(player_t *player1, player_t *player2);
+int Battle(player_t *player1, player_t *player2);
 void PrintDeck(card_t deck[], size_t num_of_cards);
 
 int main()
@@ -34,6 +41,8 @@ int main()
 	player_t *player2 = (player_t *)malloc(sizeof(player_t));
 	card_t player1_hand[CARDS_PER_DECK] = {0};
 	card_t player2_hand[CARDS_PER_DECK] = {0};
+	int game_status = 0;
+	size_t rounds = 0;
 
 	player1->num_of_cards = CARDS_PER_DECK / 2;
 	player2->num_of_cards = CARDS_PER_DECK / 2;
@@ -51,10 +60,21 @@ int main()
 	PrintDeck(player2->hand, player2->num_of_cards);
 	printf("\n");
 
-	while (player1->num_of_cards != CARDS_PER_DECK &&
-		   player2->num_of_cards != CARDS_PER_DECK)
+	while (0 == game_status)
 	{
-		Battle(player1, player2);
+		++rounds;
+		printf("ROUND %lu\n", rounds);
+		/*printf("\nplayer1: ");
+		PrintDeck(player1->hand, player1->num_of_cards);
+		printf("\nplayer2: ");
+		PrintDeck(player2->hand, player2->num_of_cards);
+		printf("\n");*/
+		game_status = Battle(player1, player2);
+	}
+
+	if (-1 == game_status)
+	{
+		printf("It's a tie!");
 	}
 
 	if (player1->num_of_cards == CARDS_PER_DECK)
@@ -123,97 +143,167 @@ void MoveCardsDown(player_t *player)
 {
 	size_t i = 0;
 
+	assert(NULL != player);
+
 	for (i = 0; i < (size_t)player->num_of_cards - 1; ++i)
 	{
 		player->hand[i] = player->hand[i + 1];
 	}
 }
 
-void Battle(player_t *player1, player_t *player2)
+size_t War(player_t *player1, player_t *player2, player_t **winner, player_t **loser)
 {
-	card_t player1_top = player1->hand[0];
-	card_t player2_top = player2->hand[0];
-	card_t player1_war = 0;
-	card_t player2_war = 0;
-	size_t i = 0;
-	size_t j = 0;
-	size_t k = 0;
+	size_t min_cards = 0;
+	size_t flip_index = 0;
 
-	if ((player1_top & CARD_MASK) > (player2_top & CARD_MASK))
+	assert(NULL != player1);
+	assert(NULL != player2);
+	assert(NULL != winner);
+	assert(NULL != loser);
+
+	min_cards = player1->num_of_cards < player2->num_of_cards ?
+						   player1->num_of_cards :
+						   player2->num_of_cards;
+
+	/* (min_cards - 1) is index of card to flip if there are 4 or less cards */
+	flip_index = MIN(min_cards - 1, FACED_DOWN_DEFAULT);
+
+	while (1)
 	{
-		MoveCardsDown(player1);
-		MoveCardsDown(player2);
-		player1->hand[player1->num_of_cards - 1] = player2_top;
-		player1->hand[player1->num_of_cards] = player1_top;
-		player1->num_of_cards += 1;
-		player2->num_of_cards -= 1;
+		if (player1->hand[flip_index] > player2->hand[flip_index])
+		{
+			*winner = player1;
+			*loser = player2;
+			break;
+		}
+		else if (player2->hand[flip_index] > player1->hand[flip_index])
+		{
+			*winner = player2;
+			*loser = player1;
+			break;
+		}
+		else
+		{
+			if (0 == ((min_cards - 1) - flip_index))
+			{
+				return 0;
+			}
+
+			flip_index += MIN((min_cards - 1) - flip_index, FACED_DOWN_DEFAULT + 1);
+		}
+
 	}
-	else if ((player1_top & CARD_MASK) < (player2_top & CARD_MASK))
+
+	return (flip_index + 1);
+}
+
+void UpdateCard(player_t *player, card_t card, size_t index)
+{
+	assert(NULL != player);
+
+	player->hand[index] = card;
+}
+
+void UpdateNumOfCards(player_t *player, unsigned int sign)
+{
+	assert(NULL != player);
+
+	switch (sign)
 	{
-		MoveCardsDown(player1);
-		MoveCardsDown(player2);
-		player2->hand[player2->num_of_cards - 1] = player1_top;
-		player2->hand[player2->num_of_cards] = player2_top;
-		player2->num_of_cards += 1;
-		player1->num_of_cards -= 1;
+		case ADD:
+			player->num_of_cards += 1;
+			break;
+		case SUBTRACT:
+			player->num_of_cards -= 1;
+			break;
+		default:
+			break;
 	}
-	else
+}
+
+void UpdateDecks(player_t *winner, player_t *loser, card_t winner_top, card_t loser_top)
+{
+	assert(NULL != winner);
+	assert(NULL != loser);
+
+	UpdateCard(winner, winner_top, winner->num_of_cards - 1);
+	UpdateCard(winner, loser_top, winner->num_of_cards);
+	UpdateNumOfCards(winner, ADD);
+	UpdateCard(loser, (card_t)0, loser->num_of_cards - 1);
+	UpdateNumOfCards(loser, SUBTRACT);
+}
+
+void Swap(card_t *card1, card_t *card2)
+{
+	card_t tmp = 0;
+
+	assert(NULL != card1);
+	assert(NULL != card2);
+
+	tmp = *card1;
+	*card1 = *card2;
+	*card2 = tmp;
+}
+
+int Battle(player_t *player1, player_t *player2)
+{
+	player_t *winner = NULL;
+	player_t *loser = NULL;
+	size_t war_ret = 0;
+	card_t winner_top = 0;
+	card_t loser_top = 0;
+
+	assert(NULL != player1);
+	assert(NULL != player2);
+
+	winner_top = player1->hand[0];
+	loser_top = player2->hand[0];
+
+	/**
+	* move cards down in case of a war since War() assumes first card has been
+	* removed already
+	*/
+	MoveCardsDown(player1);
+	MoveCardsDown(player2);
+
+	if ((winner_top & CARD_MASK) > (loser_top & CARD_MASK))
 	{
-		for (i = 1; i < 4 && i < (size_t)player1->num_of_cards; ++i)
-		{
-			player1_war = player1->hand[i];
-		}
-		--i;
+		winner = player1;
+		loser = player2;
+	}
+	else if ((winner_top & CARD_MASK) < (loser_top & CARD_MASK))
+	{
+		winner = player2;
+		loser = player1;
+		Swap(&winner_top, &loser_top);
+	}
+	else /* war */
+	{
+		war_ret = War(player1, player2, &winner, &loser);
 
-		for (j = 1; j < 4 && j < (size_t)player2->num_of_cards; ++j)
+		if (0 == war_ret)
 		{
-			player2_war = player2->hand[j];
-		}
-		--j;
-
-		if ((player1_war & CARD_MASK) > (player2_war & CARD_MASK))
-		{
-			for (k = 0; k < j; ++k)
-			{
-				player1_top = player1->hand[0];
-				player2_top = player2->hand[0];
-				MoveCardsDown(player1);
-				MoveCardsDown(player2);
-				player1->hand[player1->num_of_cards - 1] = player2_top;
-				player1->hand[player1->num_of_cards] = player1_top;
-				player1->num_of_cards += 1;
-				player2->num_of_cards -= 1;
-
-			}
-			while (k < j)
-			{
-				player1_top = player1->hand[0];
-				MoveCardsDown(player1);
-				player1->hand[player1->num_of_cards - 1] = player1_top;
-			}
-		}
-		else if ((player1_war & CARD_MASK) < (player2_war & CARD_MASK))
-		{
-			for (k = 0; k < i; ++k)
-			{
-				player1_top = player1->hand[0];
-				player2_top = player2->hand[0];
-				MoveCardsDown(player1);
-				MoveCardsDown(player2);
-				player2->hand[player2->num_of_cards - 1] = player1_top;
-				player2->hand[player2->num_of_cards] = player2_top;
-				player2->num_of_cards += 1;
-				player1->num_of_cards -= 1;
-			}
-
-			while (k < j)
-			{
-				player2_top = player2->hand[0];
-				MoveCardsDown(player2);
-				player2->hand[player2->num_of_cards - 1] = player2_top;
-			}
+			return (-1);
 		}
 	}
+
+	UpdateDecks(winner, loser, winner_top, loser_top);
+
+	while (0 < war_ret--)
+	{
+		winner_top = winner->hand[0];
+		loser_top = loser->hand[0];
+		MoveCardsDown(winner);
+		MoveCardsDown(loser);
+		UpdateDecks(winner, loser, winner_top, loser_top);
+	}
+
+	if (0 == player1->num_of_cards || 0 == player2->num_of_cards)
+	{
+		return (1);
+	}
+
+	return (0);
 }
 
 void PrintDeck(card_t deck[], size_t num_of_cards)
