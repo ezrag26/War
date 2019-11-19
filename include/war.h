@@ -21,15 +21,7 @@ void ShuffleDeck(card_t deck[]);
 
 void DealOutCards(card_t deck[], player_t *player1, player_t *player2);
 
-void MoveCardsDown(player_t *player);
-
 size_t War(player_t *player1, player_t *player2, player_t **winner, player_t **loser);
-
-void UpdateCard(player_t *player, card_t card, size_t index);
-
-void UpdateNumOfCards(player_t *player, unsigned int sign);
-
-void UpdateDecks(player_t *winner, player_t *loser, card_t winner_top, card_t loser_top);
 
 void Swap(card_t *card1, card_t *card2);
 

@@ -21,7 +21,7 @@ int main()
 		{
 			return (1);
 		}
-		
+
 		DestroyPlayer(player2);
 		return (1);
 	}
@@ -33,23 +33,23 @@ int main()
 
 	CreateDeck(deck);
 	ShuffleDeck(deck);
-	puts("Shuffled Deck:");
-	PrintDeck(deck, CARDS_PER_DECK);
+	/*puts("Shuffled Deck:");
+	PrintDeck(deck, CARDS_PER_DECK);*/
 	DealOutCards(deck, player1, player2);
-	puts("\nplayer1:");
+	/*puts("\nplayer1:");
 	PrintDeck(GetHand(player1), GetNumOfCards(player1));
 	puts("\nplayer2:");
-	PrintDeck(GetHand(player2), GetNumOfCards(player2));
+	PrintDeck(GetHand(player2), GetNumOfCards(player2));*/
 
 	while (0 == game_status)
 	{
 		++rounds;
-		printf("ROUND %lu\n", rounds);
 		/*puts("\nplayer1:");
-		PrintDeck(player1->hand, player1->num_of_cards);
+		PrintDeck(GetHand(player1), GetNumOfCards(player1));
 		puts("\nplayer2:");
-		PrintDeck(player2->hand, player2->num_of_cards);*/
+		PrintDeck(GetHand(player2), GetNumOfCards(player2));*/
 		game_status = Battle(player1, player2);
+
 	}
 
 	if (-1 == game_status)
@@ -60,13 +60,12 @@ int main()
 	if (GetNumOfCards(player1) == CARDS_PER_DECK)
 	{
 		puts("WINNER: Player 1!");
-		PrintDeck(GetHand(player1), CARDS_PER_DECK);
 	}
 	else
 	{
 		puts("WINNER: Player 2!");
-		PrintDeck(GetHand(player2), CARDS_PER_DECK);
 	}
+	printf("Game played for %lu rounds\n", rounds);
 
 
 	DestroyPlayer(player1);

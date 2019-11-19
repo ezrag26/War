@@ -18,7 +18,7 @@
 
 struct player_s
 {
-	int num_of_cards;
+	size_t num_of_cards;
 	card_t *hand;
 };
 
@@ -99,7 +99,7 @@ void DealOutCards(card_t deck[], player_t *player1, player_t *player2)
 	}
 }
 
-void MoveCardsDown(player_t *player)
+static void MoveCardsDown(player_t *player)
 {
 	size_t i = 0;
 
@@ -151,20 +151,19 @@ size_t War(player_t *player1, player_t *player2, player_t **winner, player_t **l
 
 			flip_index += MIN((min_cards - 1) - flip_index, FACED_DOWN_DEFAULT + 1);
 		}
-
 	}
 
 	return (flip_index + 1);
 }
 
-void UpdateCard(player_t *player, card_t card, size_t index)
+static void UpdateCard(player_t *player, card_t card, size_t index)
 {
 	assert(NULL != player);
 
 	player->hand[index] = card;
 }
 
-void UpdateNumOfCards(player_t *player, unsigned int sign)
+static void UpdateNumOfCards(player_t *player, unsigned int sign)
 {
 	assert(NULL != player);
 
@@ -181,7 +180,7 @@ void UpdateNumOfCards(player_t *player, unsigned int sign)
 	}
 }
 
-void UpdateDecks(player_t *winner, player_t *loser, card_t winner_top, card_t loser_top)
+static void UpdateDecks(player_t *winner, player_t *loser, card_t winner_top, card_t loser_top)
 {
 	assert(NULL != winner);
 	assert(NULL != loser);
@@ -215,7 +214,6 @@ int Battle(player_t *player1, player_t *player2)
 
 	assert(NULL != player1);
 	assert(NULL != player2);
-
 	winner_top = player1->hand[0];
 	loser_top = player2->hand[0];
 
@@ -249,8 +247,9 @@ int Battle(player_t *player1, player_t *player2)
 
 	UpdateDecks(winner, loser, winner_top, loser_top);
 
-	while (0 < war_ret--)
+	while (0 < war_ret-- && loser->num_of_cards > 0)
 	{
+
 		winner_top = winner->hand[0];
 		loser_top = loser->hand[0];
 		MoveCardsDown(winner);
@@ -270,6 +269,11 @@ void PrintDeck(card_t deck[], size_t num_of_cards)
 {
 	size_t i = 0;
 	char suits[] = {'S', 'H', 'D', 'C'};
+
+	if (0 == num_of_cards)
+	{
+		return;
+	}
 
 	printf("[");
 	for (i = 0; i < num_of_cards - 1; ++i)
