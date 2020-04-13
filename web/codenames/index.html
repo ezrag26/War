@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link type="text/css" rel="stylesheet" href="index.css">
+    <title>Codenames</title>
+</head>
+<body>
+<header>
+    <a href="index.html">
+        <img id="logo" src="img/logo.png" alt="logo"/>
+    </a>
+
+    <nav id="header-nav">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="#">Settings</a></li>
+            <li><a href="#">Contact</a></li>
+        </ul>
+    </nav>
+</header>
+
+<main>
+
+    <section id="cards">
+
+    </section>
+    <section id="score">
+        <h3><span id="team1">Blue</span> cards left: <span id="team1-cards-left"></span></h3>
+        <h3><span id="current-team"></span>'s turn</h3>
+        <h3><span id="team2">Red</span> cards left: <span id="team2-cards-left"></span></h3>
+        <input id="end-turn" class="button" type="button" value="End turn" />
+    </section>
+
+    <section id="gameboard">
+
+    </section>
+
+    <section>
+        <input id="spymaster" class="button" type="button" value="Show SpyMaster" />
+        <input id="new-game" class="button" type="button" value="New Game" />
+    </section>
+
+</main>
+
+<footer>
+
+</footer>
+
+<script src="index.js"></script>
+
+</body>
+</html>
