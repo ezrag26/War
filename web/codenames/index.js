@@ -8,12 +8,14 @@ const TEAM1 = "Blue";
 const TEAM2 = "Red";
 
 /* card colors */
+const TEAM1_COLOR = TEAM1.toLowerCase();
+const TEAM2_COLOR = TEAM2.toLowerCase();
 const CARD_DEFAULT_COLOR = "mintcream";
 const NEUTRAL_COLOR = CARD_DEFAULT_COLOR;
 const SPY_COLOR = "black";
 const teamColorMap = new Map();
-teamColorMap.set(TEAM1, TEAM1.toLowerCase());
-teamColorMap.set(TEAM2, TEAM2.toLowerCase());
+teamColorMap.set(TEAM1, TEAM1_COLOR);
+teamColorMap.set(TEAM2, TEAM2_COLOR);
 teamColorMap.set(NEUTRAL_COLOR, NEUTRAL_COLOR);
 teamColorMap.set(SPY_COLOR, SPY_COLOR);
 
@@ -26,12 +28,13 @@ const N_SPY_CARDS = 1;
 /* html id's */
 const TEAM1_ID = "team1";
 const TEAM2_ID = "team2";
+const CURRENT_TEAM_ID = "current-team";
 const TEAM1_CARDS_LEFT_ID = "team1-cards-left";
 const TEAM2_CARDS_LEFT_ID = "team2-cards-left";
 const GAMEBOARD_ID = "gameboard";
+const CARD_AVATAR_ID = "card-avatar";
 const SPYMASTER_ID = "spymaster";
 const END_TURN_ID = "end-turn";
-const CURRENT_TEAM_ID = "current-team";
 const NEW_GAME_ID = "new-game";
 
 /* html elements */
@@ -41,12 +44,11 @@ class Card {
     constructor(cardDisplay, color) {
         this._cardDisplay = cardDisplay;
         this._color = color;
-        this._chosen = false;
     }
 
     cover(element, card) {
         element.style.backgroundColor = card.color;
-        element.firstChild.remove();
+        element.firstChild.style.display = "none";
         element.appendChild(card.cardDisplay);
     }
 
@@ -57,10 +59,6 @@ class Card {
     get color() { return this._color; }
 
     set color(color) { this._color = color; }
-
-    get chosen() { return this._chosen; }
-
-    set chosen(boolean) { this._chosen = boolean; }
 }
 
 class CoverCard extends Card {
@@ -75,22 +73,27 @@ class CoverCard extends Card {
     // }
 }
 
-const coverCardMap = new Map();
-const createCoverCardMap = () => {
-    const colors = [teamColorMap.get(TEAM1), teamColorMap.get(TEAM2), NEUTRAL_COLOR, SPY_COLOR];
+// const coverCardMap = new Map();
+// const createCoverCardMap = () => {
+//     const colors = [teamColorMap.get(TEAM1), teamColorMap.get(TEAM2), NEUTRAL_COLOR, SPY_COLOR];
+//
+//     for (let i = 0; i < colors.length; ++i) {
+//         const color = colors[i];
+//         const img = createNewElem("img", ["src", "class"], [getImagePath(color), CARD_AVATAR_ID]);
+//         coverCardMap.set(color, new CoverCard(img, color));
+//     }
+// };
+//
+// createCoverCardMap();
 
-    for (let i = 0; i < colors.length; ++i) {
-        const color = colors[i];
-        const img = createNewElem("img", ["src", "class"], [getImagePath(color), "card-avatar"]);
-        coverCardMap.set(color, new CoverCard(img, color));
-    }
+const addNItems = (n, callback) =>  [...Array(n).keys()].map(callback);
+const newSpyMaster = (color) => {
+    return new SpyMasterSquare(color);
 };
 
-createCoverCardMap();
-
-const addNTimes = (arr, color, n) => {
+const addNTimes = (arr, constructor, param, n) => {
     for (let i = 0; i < n; ++i) {
-        arr.push(new SpyMasterSquare(color));
+        arr.push(new constructor(param));
     }
 };
 
@@ -101,27 +104,32 @@ const addColors = (arr, extra) => {
     if (extra === TEAM1) ++nTeam1;
     else ++nTeam2;
 
-    addNTimes(arr, teamColorMap.get(TEAM1), nTeam1);
-    addNTimes(arr, teamColorMap.get(TEAM2), nTeam2);
-    addNTimes(arr, NEUTRAL_COLOR, N_NEUTRAL_CARDS);
-    addNTimes(arr, SPY_COLOR, N_SPY_CARDS);
+    // arr.concat(addNItems(nTeam1, () => newSpyMaster(TEAM1_COLOR)));
+    // arr.concat(addNItems(nTeam2, () => newSpyMaster(TEAM2_COLOR)));
+    // arr.concat(addNItems(N_NEUTRAL_CARDS, () => newSpyMaster(NEUTRAL_COLOR)));
+    // arr.concat(addNItems(N_SPY_CARDS, () => newSpyMaster(SPY_COLOR)));
+
+    addNTimes(arr, SpyMasterSquare, TEAM1_COLOR, nTeam1);
+    addNTimes(arr, SpyMasterSquare, TEAM2_COLOR, nTeam2);
+    addNTimes(arr, SpyMasterSquare, NEUTRAL_COLOR, N_NEUTRAL_CARDS);
+    addNTimes(arr, SpyMasterSquare, SPY_COLOR, N_SPY_CARDS);
 };
 
 const shuffleArray = (arr) => {
     const len = arr.length;
 
     for (let i = len - 1; i >= 0; --i) {
-        const tmp = arr[i];
-        const rand = Math.floor(Math.random() * (i + 1));
+        const swapIndex = Math.floor(Math.random() * (i + 1));
+        const swapVal = arr[i];
 
-        arr[i] = arr[rand];
-        arr[rand] = tmp;
+        arr[i] = arr[swapIndex];
+        arr[swapIndex] = swapVal;
     }
 };
 
 class SpyMaster {
     constructor() {
-        this.newSpyMaster()
+        this.newSpyMasterCard()
     }
 
     static createColorMap(extra) {
@@ -133,7 +141,7 @@ class SpyMaster {
         return spyMasterCard;
     };
 
-    newSpyMaster() {
+    newSpyMasterCard() {
         this._extra = Math.random() >= 0.5.toPrecision(2) ? TEAM1 : TEAM2;
         this._spyMasterCard = SpyMaster.createColorMap(this._extra);
     }
@@ -142,8 +150,11 @@ class SpyMaster {
         const gameboardElems = GAMEBOARD_ELEM.children;
 
         for (let i = 0; i < gameboardElems.length; ++i) {
-            gameboardElems[i].style.backgroundColor = this._spyMasterCard[i].color;
-            if (this._spyMasterCard[i].color === SPY_COLOR) {
+            const color = this._spyMasterCard[i].color;
+
+            gameboardElems[i].style.backgroundColor = color;
+
+            if (color === SPY_COLOR) {
                 gameboardElems[i].style.color = "white";
             }
         }
@@ -171,9 +182,7 @@ class SpyMasterSquare {
 function setAttributes(elem, attr, attrVals) {
     console.assert(attr.length === attrVals.length);
 
-    for (let i = 0; i < attr.length; ++i) {
-        elem.setAttribute(attr[i], attrVals[i]);
-    }
+    for (let i = 0; i < attr.length; ++i) elem.setAttribute(attr[i], attrVals[i]);
 }
 
 function createNewElem(elem, attr, attrVals) {
@@ -186,9 +195,9 @@ function createNewElem(elem, attr, attrVals) {
 
 function getImagePath(color) {
     switch (color) {
-        case teamColorMap.get(TEAM1):
+        case TEAM1_COLOR:
             return "img/woman-avatar.png";
-        case teamColorMap.get(TEAM2):
+        case TEAM2_COLOR:
             return "img/guy-avatar.png";
         case NEUTRAL_COLOR:
             return "img/neutral-avatar.png";
@@ -264,51 +273,40 @@ class CodeNames {
         }
     }
 
-    updateCurrentTeam(currentTeam) {
-        /*
-            0 XOR 1 = 1
-            1 XOR 1 = 0
-         */
-        return currentTeam === TEAM1 ? TEAM2 : TEAM1;
+    swapCurrentTeam() {
+        this.currentTeam = this.currentTeam === TEAM1 ? TEAM2 : TEAM1;
     }
 
     revealColor(element) {
         const index = this.getCardIndex(element);
 
-        console.assert(index !== undefined);
+        /* card was already chosen or game over, no need to continue */
+        if (index === undefined || this.gameOver) return;
 
         const card = this.currentCards[index];
+        const revealedColor = this.spyMaster.spyMasterCard[index].color;
+        card.color = revealedColor;
 
-        /* card was already chosen, no need to continue */
-        if (this.gameOver || card.chosen === true) return;
-
-        const colorAtSquare = this.spyMaster.spyMasterCard[index].color;
-        card.color = colorAtSquare;
-        card.chosen = true;
-
-        logMove(this.currentTeam, colorAtSquare);
+        logMove(this.currentTeam, revealedColor);
 
         /* if team doesn't reveal a card of its color, switch teams */
-        if (teamColorMap.get(this.currentTeam) !== colorAtSquare) {
-            this.currentTeam = this.updateCurrentTeam(this.currentTeam);
+        if (teamColorMap.get(this.currentTeam) !== revealedColor) {
+            this.swapCurrentTeam();
         }
 
         /* update cards remaining by color */
-        if (colorAtSquare === teamColorMap.get(TEAM1)) --this.team1CardsLeft;
-        else if (colorAtSquare === teamColorMap.get(TEAM2)) --this.team2CardsLeft;
+        if (revealedColor === TEAM1_COLOR) --this.team1CardsLeft;
+        else if (revealedColor === TEAM2_COLOR) --this.team2CardsLeft;
 
         /* if all cards of a team are revealed, or the spy card was revealed, end game */
         if (this.team1CardsLeft === 0) this.endGame(TEAM1);
         if (this.team2CardsLeft === 0) this.endGame(TEAM2);
-        if (colorAtSquare === SPY_COLOR) this.endGame(this.currentTeam);
+        if (revealedColor === SPY_COLOR) this.endGame(this.currentTeam);
 
         this.updatePage();
 
-        // const attributes = ["src", "class"];
-        // const vals = [getImagePath(colorAtSquare), "card-avatar"];
-        // const img = createNewElem("img", ["src", "class"], [getImagePath(colorAtSquare), "card-avatar"]);
-        // new CoverCard(colorAtSquare).cover(element);
-        card.cover(element, coverCardMap.get(colorAtSquare));
+        const img = createNewElem("img", ["src", "class"], [getImagePath(revealedColor), CARD_AVATAR_ID]);
+        card.cover(element, new CoverCard(img, revealedColor));
     }
 
     revertGameboard() {
@@ -354,7 +352,7 @@ const setEventListener = (id, type, listener) => {
 setEventListener(SPYMASTER_ID, "mousedown", () => codeNames.spyMaster.revealSpyMaster());
 setEventListener(SPYMASTER_ID, "mouseup", () => codeNames.revertGameboard());
 setEventListener(END_TURN_ID, "click", () => {
-    codeNames.currentTeam = codeNames.updateCurrentTeam(codeNames.currentTeam);
+    codeNames.swapCurrentTeam();
     IdInnerHTML(CURRENT_TEAM_ID, codeNames.currentTeam);
 });
 setEventListener(NEW_GAME_ID, "click", () => {
