@@ -1,5 +1,8 @@
 const express = require('express');
 const models = require('../db');
+require('dotenv').config();
+
+const PORT = process.env.PORT;
 
 const { addInflow, addOutflow } = models;
 
@@ -28,4 +31,4 @@ app.post('/outflows', (req, res) => {
     })
 })
 
-app.listen(2626, () => { console.log('Listening on Port 2626') });
+app.listen(PORT, () => { console.log(`Listening on Port ${PORT}`) });
